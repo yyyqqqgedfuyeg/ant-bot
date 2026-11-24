@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bot Avatar Studio — 动态机器人头像生成器</title>
+  <!-- Load Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+          },
+          boxShadow: {
+            'dock': '0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04)',
+            'popover': '0 20px 45px -10px rgba(0, 0, 0, 0.14), 0 6px 16px -4px rgba(0, 0, 0, 0.06)',
+            'btn': '0 8px 20px -4px rgba(17, 24, 39, 0.22), 0 2px 6px -1px rgba(17, 24, 39, 0.12)',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Base tactile styling & smooth theme transitions */
+    :root {
+      --bg-canvas: #F7F7F5;
+      --bg-panel: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F5F5F3;
+      --border-subtle: rgba(17, 24, 39, 0.08);
+      --border-active: #111827;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      transition: background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* Background Theme Modes */
+    body.theme-studio {
+      --bg-canvas: #F7F7F5;
+      background-image: radial-gradient(circle at 42% 45%, rgba(255, 255, 255, 0.85) 0%, rgba(247, 247, 245, 0) 65%);
+    }
+
+    body.theme-white {
+      --bg-canvas: #FFFFFF;
+      background-image: none;
+    }
+
+    body.theme-dark {
+      --bg-canvas: #121316;
+      --bg-panel: #1B1D22;
+      --bg-card: #22252B;
+      --bg-card-hover: #2A2E36;
+      --border-subtle: rgba(255, 255, 255, 0.09);
+      --border-active: #F9FAFB;
+      --text-primary: #F3F4F6;
+      --text-secondary: #9CA3AF;
+      background-image: radial-gradient(circle at 42% 45%, rgba(38, 42, 52, 0.55) 0%, rgba(18, 19, 22, 0) 70%);
+    }
+
+    body.theme-grid {
+      --bg-canvas: #F5F5F4;
+      background-color: #F8F8F7;
+      background-image:
+        linear-gradient(45deg, #EAEAE8 25%, transparent 25%),
+        linear-gradient(-45deg, #EAEAE8 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #EAEAE8 75%),
+        linear-gradient(-45deg, transparent 75%, #EAEAE8 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }
+
+    /* Custom subtle scrollbars for the right panel */
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.35);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.55);
+    }
+
+    /* Tactile Card Selection Styles */
+    .option-card {
+      background-color: var(--bg-card);
+      border: 1.5px solid var(--border-subtle);
+      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  border-color 0.2s ease,
+                  background-color 0.2s ease,
+                  box-shadow 0.2s ease;
+    }
+    .option-card:hover {
+      background-color: var(--bg-card-hover);
+      transform: translateY(-1px);
+    }
+    .option-card:active {
+      transform: scale(0.96);
+    }
+    .option-card.is-active {
+      border-color: var(--border-active);
+      box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Color Swatch Ring */
+    .swatch-btn {
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+    }
+    .swatch-btn:hover {
+      transform: scale(1.1);
+    }
+    .swatch-btn:active {
+      transform: scale(0.94);
+    }
+    .swatch-btn.is-active {
+      box-shadow: 0 0 0 2.5px var(--bg-panel), 0 0 0 4.5px var(--border-active);
+      transform: scale(1.05);
+    }
+
+    /* Avatar Stage Ambient Shadow */
+    .bot-stage-shadow {
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    /* Custom Range Slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(156, 163, 175, 0.28);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #111827;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      margin-top: -5px;
+      transition: transform 0.15s ease;
+    }
+    body.theme-dark input[type="range"]::-webkit-slider-thumb {
+      background: #F9FAFB;
+      border-color: #1B1D22;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    /* Popover enter/exit transition */
+    .popover-panel {
+      transform-origin: left center;
+      transition: opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .popover-hidden {
+      opacity: 0;
+      transform: scale(0.94) translateX(-8px);
+      pointer-events: none;
+    }
+    .popover-visible {
+      opacity: 1;
+      transform: scale(1) translateX(0);
+      pointer-events: auto;
+    }
+
+    /* Dropdown transition */
+    .dropdown-panel {
+      transform-origin: top right;
+      transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .dropdown-hidden {
+      opacity: 0;
+      transform: scale(0.95) translateY(-6px);
+      pointer-events: none;
+    }
+    .dropdown-visible {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="theme-studio min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row">
+
+  <!-- ===================================================================== -->
+  <!-- 1. LEFT FLOATING DOCK (Desktop Left Center / Mobile Top Floating)     -->
+  <!-- ===================================================================== -->
+  <aside class="fixed top-4 left-1/2 -translate-x-1/2 lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:left-6 z-40 flex lg:flex-col items-center gap-2 p-1.5 rounded-full shadow-dock border border-black/[0.06]"
+         style="background-color: var(--bg-panel);">
+    <!-- Button 1: Design / Customize -->
+    <button id="dock-design-btn"
+            type="button"
+            title="定制外观 / Customize"
+            class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 bg-[#111827] text-white shadow-sm">
+      <!-- Palette / Pen Nib Icon -->
+      <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+      </svg>
+    </button>
+
+    <!-- Button 2: Randomize / Shuffle -->
+    <button id="dock-random-btn"
+            type="button"
+            title="随机灵感 / Randomize"
+            class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/10"
+            style="color: var(--text-secondary);">
+      <!-- Dice / Cube Icon -->
+      <svg id="dice-icon" class="w-[18px] h-[18px] transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="18" height="18" x="3" y="3" rx="3" ry="3"/>
+        <path d="M16 8h.01"/>
+        <path d="M8 8h.01"/>
+        <path d="M8 16h.01"/>
+        <path d="M16 16h.01"/>
+        <path d="M12 12h.01"/>
+      </svg>
+    </button>
+
+    <!-- Button 3: Motion & Canvas Settings -->
+    <button id="dock-settings-btn"
+            type="button"
+            title="动态与画布设置 / Motion & Canvas"
+            class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/10"
+            style="color: var(--text-secondary);">
+      <!-- Gear Icon -->
+      <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </button>
+  </aside>
+
+  <!-- Floating Motion & Canvas Settings Popover -->
+  <div id="settings-popover"
+       class="popover-panel popover-hidden fixed top-16 left-1/2 -translate-x-1/2 lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:left-24 z-50 w-[300px] rounded-2xl p-4 shadow-popover border"
+       style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
+    <div class="flex items-center justify-between mb-3 pb-2.5 border-b" style="border-color: var(--border-subtle);">
+      <span class="text-xs font-semibold tracking-wide uppercase" style="color: var(--text-secondary);">动态与画布 · Motion & Studio</span>
+      <button id="close-settings-btn" type="button" class="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors" style="color: var(--text-secondary);">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="space-y-3.5 text-sm">
+      <!-- Toggle: Autonomous Look-Around -->
+      <label class="flex items-center justify-between cursor-pointer">
+        <div>
+          <div class="font-medium text-[13px]">无心环顾四周</div>
+          <div class="text-[11px]" style="color: var(--text-secondary);">眼睛自然随机漂移与张望</div>
+        </div>
+        <input id="toggle-wander" type="checkbox" checked class="sr-only peer" />
+        <div class="w-9 h-5 bg-gray-300 dark:bg-gray-700 rounded-full peer peer-checked:bg-[#111827] dark:peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:w-4 after:h-4 after:rounded-full after:transition-all peer-checked:after:translate-x-4"></div>
+      </label>
+
+      <!-- Slider: Wander Speed -->
+      <div>
+        <div class="flex items-center justify-between text-[12px] mb-1">
+          <span class="font-medium">环顾节奏</span>
+          <span id="speed-label" class="text-[11px] font-medium" style="color: var(--text-secondary);">悠闲 (1.0x)</span>
+        </div>
+        <input id="slider-speed" type="range" min="0.4" max="2.2" step="0.1" value="1.0" class="w-full" />
+      </div>
+
+      <!-- Toggle: Natural Blink -->
+      <label class="flex items-center justify-between cursor-pointer">
+        <div>
+          <div class="font-medium text-[13px]">自然眨眼</div>
+          <div class="text-[11px]" style="color: var(--text-secondary);">随机间隔轻眨与双眨</div>
+        </div>
+        <input id="toggle-blink" type="checkbox" checked class="sr-only peer" />
+        <div class="w-9 h-5 bg-gray-300 dark:bg-gray-700 rounded-full peer peer-checked:bg-[#111827] dark:peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:w-4 after:h-4 after:rounded-full after:transition-all peer-checked:after:translate-x-4"></div>
+      </label>
+
+      <!-- Toggle: Cursor Curiosity -->
+      <label class="flex items-center justify-between cursor-pointer">
+        <div>
+          <div class="font-medium text-[13px]">指针微好奇</div>
+          <div class="text-[11px]" style="color: var(--text-secondary);">移动鼠标时短暂瞥向光标</div>
+        </div>
+        <input id="toggle-cursor" type="checkbox" checked class="sr-only peer" />
+        <div class="w-9 h-5 bg-gray-300 dark:bg-gray-700 rounded-full peer peer-checked:bg-[#111827] dark:peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:w-4 after:h-4 after:rounded-full after:transition-all peer-checked:after:translate-x-4"></div>
+      </label>
+
+      <!-- Canvas Theme Switcher -->
+      <div class="pt-2 border-t" style="border-color: var(--border-subtle);">
+        <div class="text-[12px] font-medium mb-2">画布背景 · Background</div>
+        <div class="grid grid-cols-4 gap-1.5">
+          <button type="button" data-theme="theme-studio" class="theme-chip active-theme py-1.5 px-1 rounded-lg border text-[11px] font-medium text-center transition-all" style="border-color: var(--border-active);">暖白</button>
+          <button type="button" data-theme="theme-white" class="theme-chip py-1.5 px-1 rounded-lg border text-[11px] font-medium text-center transition-all" style="border-color: var(--border-subtle);">纯白</button>
+          <button type="button" data-theme="theme-dark" class="theme-chip py-1.5 px-1 rounded-lg border text-[11px] font-medium text-center transition-all" style="border-color: var(--border-subtle);">深空</button>
+          <button type="button" data-theme="theme-grid" class="theme-chip py-1.5 px-1 rounded-lg border text-[11px] font-medium text-center transition-all" style="border-color: var(--border-subtle);">网格</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. CENTER INTERACTIVE STAGE                                           -->
+  <!-- ===================================================================== -->
+  <main id="stage-area" class="flex-1 flex flex-col items-center justify-center relative pt-20 pb-8 lg:py-0 px-4 min-h-[420px] lg:min-h-0">
+    
+    <!-- Interactive Bot Avatar Wrapper -->
+    <div id="bot-interactive-wrap"
+         role="button"
+         tabindex="0"
+         aria-label="点击互动机器人头像"
+         title="点我一下试试看 ✨"
+         class="relative flex flex-col items-center justify-center cursor-pointer group focus:outline-none">
+      
+      <!-- Main Crisp Live SVG Bot -->
+      <svg id="bot-svg"
+           viewBox="0 0 320 320"
+           class="w-[230px] h-[230px] sm:w-[265px] sm:h-[265px] lg:w-[285px] lg:h-[285px] overflow-visible drop-shadow-[0_18px_32px_rgba(0,0,0,0.08)]">
+        <!-- Whole Bot Floating & Spring Transform Group -->
+        <g id="bot-body-group" transform="translate(160, 160)">
+          <!-- Bot Silhouette Shape -->
+          <path id="bot-shape-path" d="" fill="#0F0F10" />
+          
+          <!-- Dynamic Eye Rig (Moves smoothly with 3D spherical curvature & blink) -->
+          <g id="bot-eye-rig">
+            <g id="bot-blink-group">
+              <g id="bot-left-eye-wrap"></g>
+              <g id="bot-right-eye-wrap"></g>
+            </g>
+          </g>
+        </g>
+      </svg>
+
+      <!-- Soft Ground Contact Shadow -->
+      <div id="bot-floor-shadow"
+           class="bot-stage-shadow w-28 h-3 rounded-full bg-black/[0.07] dark:bg-black/40 blur-[4px] -mt-2"></div>
+    </div>
+
+    <!-- Split Export Action Bar (Matching Reference Button Below Avatar) -->
+    <div class="relative mt-8 sm:mt-10 z-30">
+      <div class="inline-flex items-stretch rounded-xl bg-[#111827] text-white shadow-btn overflow-visible">
+        <!-- Primary Action: Export Transparent PNG -->
+        <button id="export-primary-btn"
+                type="button"
+                class="flex items-center gap-2.5 pl-4 pr-3.5 py-2.5 text-[13.5px] font-medium tracking-tight rounded-l-xl hover:bg-[#1F2937] active:bg-[#0B0F19] transition-colors">
+          <svg class="w-4 h-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+          <span>导出 PNG</span>
+        </button>
+
+        <!-- Vertical Hairline Divider -->
+        <div class="w-[1px] bg-white/15 my-1.5"></div>
+
+        <!-- Split Dropdown Trigger -->
+        <button id="export-menu-toggle"
+                type="button"
+                aria-label="更多导出选项"
+                class="px-2.5 py-2.5 rounded-r-xl hover:bg-[#1F2937] active:bg-[#0B0F19] transition-colors flex items-center justify-center">
+          <svg id="export-chevron" class="w-3.5 h-3.5 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Export Options Dropdown Menu -->
+      <div id="export-dropdown"
+           class="dropdown-panel dropdown-hidden absolute right-0 mt-2 w-52 rounded-xl p-1.5 shadow-popover border text-[13px]"
+           style="background-color: var(--bg-panel); border-color: var(--border-subtle); color: var(--text-primary);">
+        <button type="button" data-export="png-transparent" class="export-option w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left">
+          <span>导出 PNG (透明背景)</span>
+          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10" style="color: var(--text-secondary);">1024px</span>
+        </button>
+        <button type="button" data-export="png-bg" class="export-option w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left">
+          <span>导出 PNG (带背景色)</span>
+          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10" style="color: var(--text-secondary);">1024px</span>
+        </button>
+        <div class="my-1 border-t" style="border-color: var(--border-subtle);"></div>
+        <button type="button" data-export="svg-file" class="export-option w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left">
+          <span>导出 SVG 矢量图</span>
+          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10" style="color: var(--text-secondary);">矢量</span>
+        </button>
+        <button type="button" data-export="svg-copy" class="export-option w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left">
+          <span>复制 SVG 代码</span>
+          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10" style="color: var(--text-secondary);">Copy</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Subtle Status Hint -->
+    <p class="mt-3.5 text-[11.5px] tracking-wide opacity-60 hidden sm:block" style="color: var(--text-secondary);">
+      点击头像可触发互动弹跳 · 眼睛会自动无心环顾四周
+    </p>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- 3. RIGHT CUSTOMIZATION PANEL                                          -->
+  <!-- ===================================================================== -->
+  <section id="customizer-panel"
+           class="w-full lg:w-[376px] xl:w-[400px] lg:h-screen flex-shrink-0 border-t lg:border-t-0 lg:border-l rounded-t-3xl lg:rounded-none shadow-[0_-10px_30px_rgba(0,0,0,0.04)] lg:shadow-none overflow-y-auto custom-scroll px-5 sm:px-6 py-6 space-y-6 z-20"
+           style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
+
+    <!-- SECTION 1: SHAPE (4x2 Grid = 8 Shapes) -->
+    <div>
+      <div class="flex items-center justify-between mb-2.5">
+        <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">
+          形状 <span class="font-normal opacity-50 ml-1">Shape</span>
+        </h2>
+        <span id="active-shape-badge" class="text-[11px] font-medium" style="color: var(--text-secondary);">圆形 Circle</span>
+      </div>
+      <div id="shape-grid" class="grid grid-cols-4 gap-2.5">
+        <!-- Populated dynamically by JS -->
+      </div>
+    </div>
+
+    <!-- SECTION 2: EXPRESSION (4x4 Grid = 16 Expressions) -->
+    <div>
+      <div class="flex items-center justify-between mb-2.5">
+        <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">
+          表情 <span class="font-normal opacity-50 ml-1">Expression</span>
+        </h2>
+        <span id="active-expression-badge" class="text-[11px] font-medium" style="color: var(--text-secondary);">自然 Neutral</span>
+      </div>
+      <div id="expression-grid" class="grid grid-cols-4 gap-2.5">
+        <!-- Populated dynamically by JS -->
+      </div>
+    </div>
+
+    <!-- SECTION 3: COLOUR (2 Rows of 6 Swatches + Custom Color Picker) -->
+    <div class="pb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">
+          颜色 <span class="font-normal opacity-50 ml-1">Colour</span>
+        </h2>
+        <span id="active-color-badge" class="text-[11px] font-mono uppercase" style="color: var(--text-secondary);">#0F0F10</span>
+      </div>
+      <div id="color-grid" class="grid grid-cols-6 gap-3 place-items-center">
+        <!-- Populated dynamically by JS -->
+      </div>
+
+      <!-- Custom Hex Color Picker Row -->
+      <div class="mt-3.5 pt-3 border-t flex items-center justify-between" style="border-color: var(--border-subtle);">
+        <span class="text-[12px]" style="color: var(--text-secondary);">自定义色值 · Custom</span>
+        <label for="custom-color-input"
+               class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+               style="border-color: var(--border-subtle);">
+          <span class="w-4 h-4 rounded-full border border-black/15"
+                style="background: conic-gradient(from 0deg, #ff595e, #ffca3a, #8ac926, #1982c4, #6a4c93, #ff595e);"></span>
+          <span class="text-[12px] font-medium">调色盘</span>
+          <input id="custom-color-input" type="color" value="#0F0F10" class="sr-only" />
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- Non-Intrusive Toast Notification -->
+  <div id="toast-banner"
+       class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-[#111827] text-white text-[13px] font-medium shadow-popover flex items-center gap-2 opacity-0 translate-y-3 pointer-events-none transition-all duration-300">
+    <svg class="w-4 h-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+    <span id="toast-text">已导出 PNG</span>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- APPLICATION LOGIC & LIVE ANIMATION ENGINE                             -->
+  <!-- ===================================================================== -->
+  <script>
+    /**
+     * 1. GEOMETRY DEFINITIONS: 8 SCULPTED BOT SHAPES
+     * All paths are centered at (0, 0) within a normalized ~208x208 coordinate space
+     * so they scale identically on the 320x320 main canvas, mini preview cards, and 1024px export.
+     */
+    const SHAPES = [
+      {
+        id: 'circle',
+        label: '圆形',
+        en: 'Circle',
+        path: 'M 0,-104 A 104,104 0 1,1 0,104 A 104,104 0 1,1 0,-104 Z',
+        gazeBounds: { baseX: 0, baseY: -6, maxRx: 28, maxRy: 24, taperTop: 0 }
+      },
+      {
+        id: 'pebble',
+        label: '鹅卵石',
+        en: 'Pebble',
+        // Organic asymmetric smooth river pebble (matching the iconic reference shape)
+        path: 'M -8,-102 C 54,-105 106,-60 104,-4 C 102,56 54,102 -10,101 C -68,100 -106,58 -104,2 C -102,-58 -64,-99 -8,-102 Z',
+        gazeBounds: { baseX: 3, baseY: -7, maxRx: 26, maxRy: 22, taperTop: 0 }
+      },
+      {
+        id: 'squircle',
+        label: '超椭圆',
+        en: 'Squircle',
+        // Continuous curvature Apple-style superellipse
+        path: 'M 0,-102 C 76,-102 102,-76 102,0 C 102,76 76,102 0,102 C -76,102 -102,76 -102,0 C -102,-76 -76,-102 0,-102 Z',
+        gazeBounds: { baseX: 0, baseY: -5, maxRx: 30, maxRy: 24, taperTop: 0 }
+      },
+      {
+        id: 'capsule',
+        label: '胶囊形',
+        en: 'Capsule',
+        // Wide horizontal rounded capsule
+        path: 'M -44,-74 L 44,-74 A 74,74 0 0,1 44,74 L -44,74 A 74,74 0 0,1 -44,-74 Z',
+        gazeBounds: { baseX: 0, baseY: -2, maxRx: 42, maxRy: 14, taperTop: 0 }
+      },
+      {
+        id: 'triangle',
+        label: '圆角三角',
+        en: 'Triangle',
+        // Soft rounded equilateral triangle visually balanced around center
+        path: 'M -22,-84 C -10,-104 10,-104 22,-84 L 94,44 C 106,65 95,88 71,88 L -71,88 C -95,88 -106,65 -94,44 Z',
+        gazeBounds: { baseX: 0, baseY: 14, maxRx: 22, maxRy: 16, taperTop: 0.45 }
+      },
+      {
+        id: 'hexagon',
+        label: '圆角六边',
+        en: 'Hexagon',
+        // Softly rounded regular hexagon
+        path: 'M -14,-100 C -5,-105 5,-105 14,-100 L 82,-60 C 91,-55 96,-46 96,-36 L 96,36 C 96,46 91,55 82,60 L 14,100 C 5,105 -5,105 -14,100 L -82,60 C -91,55 -96,46 -96,36 L -96,-36 C -96,-46 -91,-55 -82,-60 Z',
+        gazeBounds: { baseX: 0, baseY: -4, maxRx: 26, maxRy: 22, taperTop: 0.1 }
+      },
+      {
+        id: 'cloud',
+        label: '云朵',
+        en: 'Cloud',
+        // Sculpted fluffy geometric cloud silhouette
+        path: 'M -56,78 C -88,78 -110,55 -110,26 C -110,1 -92,-20 -68,-24 C -64,-62 -32,-90 6,-90 C 44,-90 75,-62 79,-24 C 99,-17 112,2 112,24 C 112,55 88,78 56,78 Z',
+        gazeBounds: { baseX: 0, baseY: 6, maxRx: 30, maxRy: 16, taperTop: 0.15 }
+      },
+      {
+        id: 'droplet',
+        label: '水滴',
+        en: 'Droplet',
+        // Soft teardrop silhouette with plump rounded bottom
+        path: 'M -12,-96 C -5,-106 5,-106 12,-96 C 46,-46 94,4 94,44 C 94,86 54,108 0,108 C -54,108 -94,86 -94,44 C -94,4 -46,-46 -12,-96 Z',
+        gazeBounds: { baseX: 0, baseY: 20, maxRx: 24, maxRy: 16, taperTop: 0.48 }
+      }
+    ];
+
+    /**
+     * 2. EXPRESSIONS: 16 DISTINCT EYE STYLES
+     * Each expression returns crisp SVG primitives for Left & Right eyes centered at (0, 0)
+     * using the dynamic eyeFill color (#FFFFFF on dark bodies, #141416 on light bodies).
+     */
+    const EXPRESSIONS = [
+      {
+        id: 'neutral',
+        label: '自然',
+        en: 'Neutral',
+        render: (fill) => ({
+          left: `<rect x="-34" y="-26" width="21" height="52" rx="10.5" fill="${fill}" />`,
+          right: `<rect x="13" y="-26" width="21" height="52" rx="10.5" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'attentive',
+        label: '专注',
+        en: 'Attentive',
+        render: (fill) => ({
+          left: `<rect x="-31" y="-29" width="19" height="58" rx="9.5" fill="${fill}" />`,
+          right: `<rect x="12" y="-29" width="19" height="58" rx="9.5" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'surprised',
+        label: '惊讶',
+        en: 'Surprised',
+        render: (fill) => ({
+          left: `<circle cx="-26" cy="0" r="19" fill="${fill}" />`,
+          right: `<circle cx="26" cy="0" r="19" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'excited',
+        label: '兴奋',
+        en: 'Excited',
+        render: (fill) => ({
+          left: `<path d="M -42,8 Q -26,-16 -10,8" fill="none" stroke="${fill}" stroke-width="11" stroke-linecap="round" />`,
+          right: `<path d="M 10,8 Q 26,-16 42,8" fill="none" stroke="${fill}" stroke-width="11" stroke-linecap="round" />`
+        })
+      },
+      {
+        id: 'happy',
+        label: '开心',
+        en: 'Happy',
+        render: (fill) => ({
+          left: `<path d="M -41,7 C -41,-13 -11,-13 -11,7" fill="none" stroke="${fill}" stroke-width="10.5" stroke-linecap="round" />`,
+          right: `<path d="M 11,7 C 11,-13 41,-13 41,7" fill="none" stroke="${fill}" stroke-width="10.5" stroke-linecap="round" />`
+        })
+      },
+      {
+        id: 'laughing',
+        label: '大笑',
+        en: 'Laughing',
+        render: (fill) => ({
+          left: `<path d="M -41,-8 L -14,2 L -41,12" fill="none" stroke="${fill}" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round" />`,
+          right: `<path d="M 41,-8 L 14,2 L 41,12" fill="none" stroke="${fill}" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round" />`
+        })
+      },
+      {
+        id: 'angry',
+        label: '生气',
+        en: 'Angry',
+        render: (fill) => ({
+          left: `<rect x="-35" y="-23" width="21" height="46" rx="10.5" transform="rotate(-16 -24.5 0)" fill="${fill}" />`,
+          right: `<rect x="14" y="-23" width="21" height="46" rx="10.5" transform="rotate(16 24.5 0)" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'sad',
+        label: '难过',
+        en: 'Sad',
+        render: (fill) => ({
+          left: `<rect x="-35" y="-22" width="21" height="44" rx="10.5" transform="rotate(17 -24.5 0)" fill="${fill}" />`,
+          right: `<rect x="14" y="-22" width="21" height="44" rx="10.5" transform="rotate(-17 24.5 0)" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'scared',
+        label: '害怕',
+        en: 'Scared',
+        render: (fill) => ({
+          left: `<rect x="-29" y="-27" width="15" height="54" rx="7.5" fill="${fill}" />`,
+          right: `<rect x="14" y="-27" width="15" height="54" rx="7.5" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'suspicious',
+        label: '怀疑',
+        en: 'Suspicious',
+        render: (fill) => ({
+          left: `<rect x="-42" y="-9" width="32" height="18" rx="9" fill="${fill}" />`,
+          right: `<rect x="10" y="-9" width="32" height="18" rx="9" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'confused',
+        label: '困惑',
+        en: 'Confused',
+        render: (fill) => ({
+          left: `<circle cx="-26" cy="-3" r="18" fill="${fill}" />`,
+          right: `<rect x="13" y="-14" width="22" height="32" rx="11" transform="rotate(-10 24 2)" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'curious',
+        label: '好奇',
+        en: 'Curious',
+        render: (fill) => ({
+          left: `<rect x="-35" y="-21" width="19" height="44" rx="9.5" fill="${fill}" />`,
+          right: `<rect x="12" y="-28" width="24" height="56" rx="12" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'proud',
+        label: '得意',
+        en: 'Proud',
+        render: (fill) => ({
+          left: `<path d="M -41,-4 C -36,12 -16,12 -11,-4" fill="none" stroke="${fill}" stroke-width="10.5" stroke-linecap="round" />`,
+          right: `<path d="M 11,-4 C 16,12 36,12 41,-4" fill="none" stroke="${fill}" stroke-width="10.5" stroke-linecap="round" />`
+        })
+      },
+      {
+        id: 'shy',
+        label: '害羞',
+        en: 'Shy',
+        render: (fill) => ({
+          left: `<rect x="-29" y="-16" width="17" height="38" rx="8.5" transform="rotate(8 -20.5 3)" fill="${fill}" />`,
+          right: `<rect x="12" y="-16" width="17" height="38" rx="8.5" transform="rotate(-8 20.5 3)" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'unimpressed',
+        label: '冷漠',
+        en: 'Unimpressed',
+        render: (fill) => ({
+          left: `<rect x="-43" y="-6.5" width="34" height="13" rx="6.5" fill="${fill}" />`,
+          right: `<rect x="9" y="-6.5" width="34" height="13" rx="6.5" fill="${fill}" />`
+        })
+      },
+      {
+        id: 'sleepy',
+        label: '困倦',
+        en: 'Sleepy',
+        render: (fill) => ({
+          left: `<path d="M -42,0 Q -26,11 -10,0" fill="none" stroke="${fill}" stroke-width="10" stroke-linecap="round" />`,
+          right: `<path d="M 10,0 Q 26,11 42,0" fill="none" stroke="${fill}" stroke-width="10" stroke-linecap="round" />`
+        })
+      }
+    ];
+
+    /**
+     * 3. CURATED COLOUR PALETTE (12 Swatches matching reference aesthetic)
+     */
+    const SWATCHES = [
+      { id: 'jet', name: '曜石黑', hex: '#0F0F10' },
+      { id: 'brown', name: '可可棕', hex: '#7C5338' },
+      { id: 'coral', name: '珊瑚红', hex: '#E8453C' },
+      { id: 'orange', name: '活力橙', hex: '#F28D27' },
+      { id: 'yellow', name: '暖阳黄', hex: '#F6C324' },
+      { id: 'mint', name: '薄荷绿', hex: '#3CD070' },
+      { id: 'teal', name: '翡翠青', hex: '#26C69A' },
+      { id: 'blue', name: '晴空蓝', hex: '#3B8DF6' },
+      { id: 'purple', name: '幻彩紫', hex: '#8A5CF6' },
+      { id: 'pink', name: '蔷薇粉', hex: '#E84AA8' },
+      { id: 'grey', name: '高级灰', hex: '#9CA3AF' },
+      { id: 'cream', name: '燕麦米', hex: '#EFECE6' }
+    ];
+
+    /**
+     * 4. CENTRAL APPLICATION STATE
+     */
+    const state = {
+      shapeId: 'circle',
+      expressionId: 'neutral',
+      color: '#0F0F10',
+      theme: 'theme-studio',
+      // Motion settings
+      wanderEnabled: true,
+      wanderSpeed: 1.0,
+      blinkEnabled: true,
+      cursorCuriosity: true
+    };
+
+    /**
+     * 5. LUMINANCE CONTRAST HELPER
+     * Automatically switches eye color between crisp white (#FFFFFF) and charcoal (#141416)
+     * whenever the user selects a light body color like Warm Cream (#EFECE6).
+     */
+    function getEyeContrastColor(hexColor) {
+      const hex = hexColor.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16) / 255;
+      const g = parseInt(hex.substring(2, 4), 16) / 255;
+      const b = parseInt(hex.substring(4, 6), 16) / 255;
+      // Perceived brightness (YIQ / Rec.601 luminance)
+      const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+      return brightness > 0.72 ? '#141416' : '#FFFFFF';
+    }
+
+    /**
+     * 6. DOM REFERENCES
+     */
+    const botBodyGroup = document.getElementById('bot-body-group');
+    const botShapePath = document.getElementById('bot-shape-path');
+    const botEyeRig = document.getElementById('bot-eye-rig');
+    const botBlinkGroup = document.getElementById('bot-blink-group');
+    const botLeftEyeWrap = document.getElementById('bot-left-eye-wrap');
+    const botRightEyeWrap = document.getElementById('bot-right-eye-wrap');
+    const botFloorShadow = document.getElementById('bot-floor-shadow');
+    const botInteractiveWrap = document.getElementById('bot-interactive-wrap');
+
+    const shapeGrid = document.getElementById('shape-grid');
+    const expressionGrid = document.getElementById('expression-grid');
+    const colorGrid = document.getElementById('color-grid');
+    const customColorInput = document.getElementById('custom-color-input');
+
+    const activeShapeBadge = document.getElementById('active-shape-badge');
+    const activeExpressionBadge = document.getElementById('active-expression-badge');
+    const activeColorBadge = document.getElementById('active-color-badge');
+
+    /**
+     * 7. RENDER UI CONTROLS (SHAPE CARDS, EXPRESSION CARDS, COLOR SWATCHES)
+     */
+    function renderShapeCards() {
+      shapeGrid.innerHTML = SHAPES.map((s) => {
+        const isActive = s.id === state.shapeId;
+        return `
+          <button type="button"
+                  data-shape="${s.id}"
+                  class="option-card ${isActive ? 'is-active' : ''} flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl cursor-pointer">
+            <svg viewBox="-135 -135 270 270" class="w-10 h-10 mb-1.5 overflow-visible">
+              <path d="${s.path}" fill="currentColor" />
+              <!-- Mini signature glance eyes on the shape icon -->
+              <rect x="8" y="-42" width="18" height="44" rx="9" fill="var(--bg-card)" transform="rotate(8 17 -20)" />
+              <rect x="44" y="-36" width="18" height="44" rx="9" fill="var(--bg-card)" transform="rotate(11 53 -14)" />
+            </svg>
+            <span class="text-[11px] font-medium leading-tight tracking-tight">${s.label}</span>
+          </button>
+        `;
+      }).join('');
+
+      shapeGrid.querySelectorAll('[data-shape]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.shapeId = btn.dataset.shape;
+          triggerSpringBounce(0.06);
+          updateBotAppearance();
+          updateActiveCards();
+        });
+      });
+    }
+
+    function renderExpressionCards() {
+      const circlePath = SHAPES[0].path;
+      expressionGrid.innerHTML = EXPRESSIONS.map((exp) => {
+        const isActive = exp.id === state.expressionId;
+        const eyes = exp.render('var(--bg-card)');
+        return `
+          <button type="button"
+                  data-expression="${exp.id}"
+                  class="option-card ${isActive ? 'is-active' : ''} flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl cursor-pointer">
+            <svg viewBox="-135 -135 270 270" class="w-10 h-10 mb-1.5 overflow-visible">
+              <path d="${circlePath}" fill="currentColor" />
+              <g transform="translate(0, -8) scale(1.12)">
+                ${eyes.left}
+                ${eyes.right}
+              </g>
+            </svg>
+            <span class="text-[11px] font-medium leading-tight tracking-tight">${exp.label}</span>
+          </button>
+        `;
+      }).join('');
+
+      expressionGrid.querySelectorAll('[data-expression]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.expressionId = btn.dataset.expression;
+          triggerSpringBounce(0.05);
+          triggerBlink(false);
+          updateBotAppearance();
+          updateActiveCards();
+        });
+      });
+    }
+
+    function renderColorSwatches() {
+      colorGrid.innerHTML = SWATCHES.map((sw) => {
+        const isActive = sw.hex.toLowerCase() === state.color.toLowerCase();
+        return `
+          <button type="button"
+                  data-color="${sw.hex}"
+                  title="${sw.name} (${sw.hex})"
+                  class="swatch-btn ${isActive ? 'is-active' : ''} w-9 h-9 rounded-full border border-black/10 cursor-pointer"
+                  style="background-color: ${sw.hex};">
+          </button>
+        `;
+      }).join('');
+
+      colorGrid.querySelectorAll('[data-color]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.color = btn.dataset.color;
+          customColorInput.value = state.color;
+          triggerSpringBounce(0.045);
+          updateBotAppearance();
+          updateActiveCards();
+        });
+      });
+    }
+
+    function updateActiveCards() {
+      // Update Shape cards
+      shapeGrid.querySelectorAll('[data-shape]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.shape === state.shapeId);
+      });
+      const currentShape = SHAPES.find((s) => s.id === state.shapeId);
+      activeShapeBadge.textContent = `${currentShape.label} ${currentShape.en}`;
+
+      // Update Expression cards
+      expressionGrid.querySelectorAll('[data-expression]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.expression === state.expressionId);
+      });
+      const currentExp = EXPRESSIONS.find((e) => e.id === state.expressionId);
+      activeExpressionBadge.textContent = `${currentExp.label} ${currentExp.en}`;
+
+      // Update Color swatches
+      colorGrid.querySelectorAll('[data-color]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.color.toLowerCase() === state.color.toLowerCase());
+      });
+      activeColorBadge.textContent = state.color.toUpperCase();
+    }
+
+    /**
+     * 8. UPDATE LIVE BOT SVG GEOMETRY & COLORS
+     */
+    function updateBotAppearance() {
+      const shapeObj = SHAPES.find((s) => s.id === state.shapeId) || SHAPES[0];
+      const expObj = EXPRESSIONS.find((e) => e.id === state.expressionId) || EXPRESSIONS[0];
+      const eyeFill = getEyeContrastColor(state.color);
+
+      botShapePath.setAttribute('d', shapeObj.path);
+      botShapePath.setAttribute('fill', state.color);
+
+      const eyesSvg = expObj.render(eyeFill);
+      botLeftEyeWrap.innerHTML = eyesSvg.left;
+      botRightEyeWrap.innerHTML = eyesSvg.right;
+    }
+
+    /**
+     * 9. LIFELIKE AUTONOMOUS EYE & BODY PHYSICS ENGINE ("无心的环顾四周")
+     */
+    const motion = {
+      // Normalized gaze coordinates in [-1, 1]
+      gazeX: 0.58,
+      gazeY: -0.52,
+      targetX: 0.58,
+      targetY: -0.52,
+      // Waypoint timing
+      nextWaypointTime: performance.now() + 1800,
+      // Cursor curiosity state
+      pointerActive: false,
+      pointerX: 0,
+      pointerY: 0,
+      lastPointerMove: 0,
+      // Natural blinking state
+      blinkScaleY: 1,
+      isBlinking: false,
+      blinkProgress: 0,
+      nextBlinkTime: performance.now() + 2600,
+      queuedDoubleBlink: false,
+      // Tactile spring bounce (squash & stretch)
+      springScale: 0,
+      springVel: 0,
+      // Ambient floating clock
+      elapsed: 0,
+      lastFrameTime: performance.now()
+    };
+
+    /**
+     * Picks a natural, thoughtful look-around gaze target.
+     * Simulates casual daydreaming: glancing up-right, pausing, drifting across,
+     * checking slightly down, or resting near center.
+     */
+    function pickNextGazeWaypoint(now) {
+      const presets = [
+        { x: 0.72, y: -0.62 },  // Iconic upper-right contemplative glance
+        { x: -0.68, y: -0.35 }, // Thoughtful upper-left drift
+        { x: 0.45, y: 0.35 },   // Casual lower-right glance
+        { x: -0.52, y: 0.42 },  // Casual lower-left glance
+        { x: 0.08, y: -0.15 },  // Gentle near-center rest
+        { x: 0.82, y: -0.10 },  // Sideways peek right
+        { x: -0.78, y: 0.05 },  // Sideways peek left
+        { x: -0.15, y: -0.65 }  // Daydreaming upward gaze
+      ];
+
+      // Choose a waypoint sufficiently distinct from current target
+      let candidate = presets[Math.floor(Math.random() * presets.length)];
+      if (Math.hypot(candidate.x - motion.targetX, candidate.y - motion.targetY) < 0.35) {
+        candidate = presets[(presets.indexOf(candidate) + 3) % presets.length];
+      }
+
+      // Add organic micro-variation
+      motion.targetX = Math.max(-0.95, Math.min(0.95, candidate.x + (Math.random() - 0.5) * 0.24));
+      motion.targetY = Math.max(-0.9, Math.min(0.9, candidate.y + (Math.random() - 0.5) * 0.22));
+
+      // Pause duration between 1.3s and 3.1s (scaled by wanderSpeed)
+      const pauseMs = (1300 + Math.random() * 1800) / state.wanderSpeed;
+      motion.nextWaypointTime = now + pauseMs;
+    }
+
+    function triggerBlink(allowDouble = true) {
+      if (motion.isBlinking) return;
+      motion.isBlinking = true;
+      motion.blinkProgress = 0;
+      motion.queuedDoubleBlink = allowDouble && Math.random() < 0.24;
+    }
+
+    function triggerSpringBounce(impulse = 0.09) {
+      motion.springVel = impulse;
+    }
+
+    /**
+     * Computes actual pixel coordinates & 3D spherical curvature transforms for the eyes
+     * based on the active shape's safe interior bounds.
+     */
+    function computeEyeTransform(nx, ny) {
+      const shapeObj = SHAPES.find((s) => s.id === state.shapeId) || SHAPES[0];
+      const b = shapeObj.gazeBounds;
+
+      // Taper horizontal excursion when looking upward into narrow top shapes (Triangle / Droplet)
+      const upwardRatio = Math.max(0, -ny);
+      const effectiveMaxRx = b.maxRx * (1 - upwardRatio * b.taperTop);
+
+      const px = b.baseX + nx * effectiveMaxRx;
+      const py = b.baseY + ny * b.maxRy;
+
+      // Subtle 3D spherical curvature illusion: slight perspective scale & organic roll tilt
+      const tiltDeg = nx * 7.5 + nx * (-ny) * 3.5;
+      const perspScaleX = 1 - Math.abs(nx) * 0.07;
+      const perspScaleY = 1 - Math.abs(ny) * 0.04;
+
+      return { px, py, tiltDeg, perspScaleX, perspScaleY };
+    }
+
+    function animationLoop(now) {
+      const dt = Math.min(0.05, (now - motion.lastFrameTime) / 1000);
+      motion.lastFrameTime = now;
+      motion.elapsed += dt;
+
+      // 1. Update Gaze Target (Cursor Curiosity vs Autonomous Casual Look-Around)
+      const cursorStillDuration = now - motion.lastPointerMove;
+      if (state.cursorCuriosity && motion.pointerActive && cursorStillDuration < 1500) {
+        motion.targetX = motion.pointerX;
+        motion.targetY = motion.pointerY;
+      } else if (state.wanderEnabled) {
+        if (now >= motion.nextWaypointTime) {
+          pickNextGazeWaypoint(now);
+        }
+      } else {
+        // Return gently to resting center if autonomous wandering is toggled off
+        motion.targetX = 0;
+        motion.targetY = 0;
+      }
+
+      // Smooth critically-damped interpolation toward target gaze
+      const followRate = 1 - Math.exp(-3.4 * state.wanderSpeed * dt);
+      motion.gazeX += (motion.targetX - motion.gazeX) * followRate;
+      motion.gazeY += (motion.targetY - motion.gazeY) * followRate;
+
+      // 2. Update Natural Blinking
+      if (state.blinkEnabled && !motion.isBlinking && now >= motion.nextBlinkTime) {
+        triggerBlink(true);
+        motion.nextBlinkTime = now + (2800 + Math.random() * 2800);
+      }
+
+      if (motion.isBlinking) {
+        motion.blinkProgress += dt / 0.155; // Crisp 155ms natural blink
+        if (motion.blinkProgress >= 1) {
+          motion.blinkProgress = 0;
+          motion.blinkScaleY = 1;
+          motion.isBlinking = false;
+          if (motion.queuedDoubleBlink) {
+            motion.queuedDoubleBlink = false;
+            setTimeout(() => triggerBlink(false), 110);
+          }
+        } else {
+          // Smooth sine-squared close & open
+          const wave = Math.sin(motion.blinkProgress * Math.PI);
+          motion.blinkScaleY = Math.max(0.06, 1 - wave * 0.94);
+        }
+      }
+
+      // 3. Update Tactile Spring Squash & Stretch Physics
+      const stiffness = 260;
+      const damping = 14;
+      const springForce = -stiffness * motion.springScale - damping * motion.springVel;
+      motion.springVel += springForce * dt;
+      motion.springScale += motion.springVel * dt;
+
+      const bodyScaleX = 1 + motion.springScale;
+      const bodyScaleY = 1 - motion.springScale * 0.85;
+
+      // 4. Ambient Subtle Floating / Breathing Motion
+      const floatY = Math.sin(motion.elapsed * 1.45) * 4.5;
+      const swayDeg = Math.sin(motion.elapsed * 0.95) * 1.15;
+
+      // Apply transform to Bot Body
+      botBodyGroup.setAttribute(
+        'transform',
+        `translate(160, ${(160 + floatY).toFixed(2)}) rotate(${swayDeg.toFixed(2)}) scale(${bodyScaleX.toFixed(4)}, ${bodyScaleY.toFixed(4)})`
+      );
+
+      // Subtle floor shadow breathing
+      const shadowScale = 1 - (floatY / 4.5) * 0.08;
+      botFloorShadow.style.transform = `scaleX(${shadowScale.toFixed(3)})`;
+
+      // 5. Apply Eye Gaze Position + 3D Spherical Curvature + Inertial Follow-Through + Blink
+      const { px, py, tiltDeg, perspScaleX, perspScaleY } = computeEyeTransform(motion.gazeX, motion.gazeY);
+      const inertialLagY = -Math.cos(motion.elapsed * 1.45) * 1.1;
+
+      botEyeRig.setAttribute(
+        'transform',
+        `translate(${px.toFixed(2)}, ${(py + inertialLagY).toFixed(2)}) rotate(${tiltDeg.toFixed(2)}) scale(${perspScaleX.toFixed(4)}, ${perspScaleY.toFixed(4)})`
+      );
+
+      botBlinkGroup.setAttribute('transform', `scale(1, ${motion.blinkScaleY.toFixed(4)})`);
+
+      // Differential depth compression between left and right eye on curved surface
+      const leftCompression = 1 - Math.max(0, -motion.gazeX) * 0.06;
+      const rightCompression = 1 - Math.max(0, motion.gazeX) * 0.06;
+      botLeftEyeWrap.setAttribute('transform', `scale(${leftCompression.toFixed(4)}, 1)`);
+      botRightEyeWrap.setAttribute('transform', `scale(${rightCompression.toFixed(4)}, 1)`);
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    /**
+     * 10. INTERACTIVE STAGE EVENTS (CLICK BOUNCE & CURSOR CURIOSITY)
+     */
+    botInteractiveWrap.addEventListener('click', () => {
+      triggerSpringBounce(0.11);
+      triggerBlink(false);
+    });
+
+    botInteractiveWrap.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        triggerSpringBounce(0.11);
+        triggerBlink(false);
+      }
+    });
+
+    const stageArea = document.getElementById('stage-area');
+    stageArea.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const rect = botInteractiveWrap.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const dx = (e.clientX - centerX) / 220;
+      const dy = (e.clientY - centerY) / 220;
+
+      motion.pointerX = Math.max(-0.95, Math.min(0.95, dx));
+      motion.pointerY = Math.max(-0.9, Math.min(0.9, dy));
+      motion.pointerActive = true;
+      motion.lastPointerMove = performance.now();
+    });
+
+    stageArea.addEventListener('pointerleave', () => {
+      motion.pointerActive = false;
+    });
+
+    /**
+     * 11. FLOATING DOCK & SETTINGS POPOVER CONTROLS
+     */
+    const dockDesignBtn = document.getElementById('dock-design-btn');
+    const dockRandomBtn = document.getElementById('dock-random-btn');
+    const dockSettingsBtn = document.getElementById('dock-settings-btn');
+    const diceIcon = document.getElementById('dice-icon');
+    const settingsPopover = document.getElementById('settings-popover');
+    const closeSettingsBtn = document.getElementById('close-settings-btn');
+    const customizerPanel = document.getElementById('customizer-panel');
+
+    let diceRotation = 0;
+
+    dockDesignBtn.addEventListener('click', () => {
+      settingsPopover.classList.replace('popover-visible', 'popover-hidden');
+      customizerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    dockRandomBtn.addEventListener('click', () => {
+      diceRotation += 180;
+      diceIcon.style.transform = `rotate(${diceRotation}deg)`;
+
+      // Pick random distinct shape, expression, and color
+      const randomShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+      const randomExp = EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
+      const randomSwatch = SWATCHES[Math.floor(Math.random() * SWATCHES.length)];
+
+      state.shapeId = randomShape.id;
+      state.expressionId = randomExp.id;
+      state.color = randomSwatch.hex;
+      customColorInput.value = state.color;
+
+      triggerSpringBounce(0.11);
+      triggerBlink(false);
+      pickNextGazeWaypoint(performance.now());
+      updateBotAppearance();
+      updateActiveCards();
+    });
+
+    dockSettingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = settingsPopover.classList.contains('popover-hidden');
+      if (isHidden) {
+        settingsPopover.classList.replace('popover-hidden', 'popover-visible');
+      } else {
+        settingsPopover.classList.replace('popover-visible', 'popover-hidden');
+      }
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsPopover.classList.replace('popover-visible', 'popover-hidden');
+    });
+
+    // Motion settings bindings
+    const toggleWander = document.getElementById('toggle-wander');
+    const sliderSpeed = document.getElementById('slider-speed');
+    const speedLabel = document.getElementById('speed-label');
+    const toggleBlink = document.getElementById('toggle-blink');
+    const toggleCursor = document.getElementById('toggle-cursor');
+
+    toggleWander.addEventListener('change', (e) => {
+      state.wanderEnabled = e.target.checked;
+      if (state.wanderEnabled) pickNextGazeWaypoint(performance.now());
+    });
+
+    sliderSpeed.addEventListener('input', (e) => {
+      state.wanderSpeed = parseFloat(e.target.value);
+      const mood = state.wanderSpeed < 0.8 ? '慵懒' : state.wanderSpeed > 1.4 ? '活跃' : '悠闲';
+      speedLabel.textContent = `${mood} (${state.wanderSpeed.toFixed(1)}x)`;
+    });
+
+    toggleBlink.addEventListener('change', (e) => {
+      state.blinkEnabled = e.target.checked;
+    });
+
+    toggleCursor.addEventListener('change', (e) => {
+      state.cursorCuriosity = e.target.checked;
+    });
+
+    // Background theme switching
+    document.querySelectorAll('.theme-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const nextTheme = chip.dataset.theme;
+        document.body.classList.remove('theme-studio', 'theme-white', 'theme-dark', 'theme-grid');
+        document.body.classList.add(nextTheme);
+        state.theme = nextTheme;
+
+        document.querySelectorAll('.theme-chip').forEach((c) => {
+          c.style.borderColor = c.dataset.theme === nextTheme ? 'var(--border-active)' : 'var(--border-subtle)';
+        });
+      });
+    });
+
+    // Custom Color Input
+    customColorInput.addEventListener('input', (e) => {
+      state.color = e.target.value;
+      updateBotAppearance();
+      updateActiveCards();
+    });
+
+    /**
+     * 12. EXPORT SYSTEM (1024x1024 PNG & CRISP VECTOR SVG)
+     */
+    const exportPrimaryBtn = document.getElementById('export-primary-btn');
+    const exportMenuToggle = document.getElementById('export-menu-toggle');
+    const exportDropdown = document.getElementById('export-dropdown');
+    const exportChevron = document.getElementById('export-chevron');
+    const toastBanner = document.getElementById('toast-banner');
+    const toastText = document.getElementById('toast-text');
+
+    let toastTimer = null;
+    function showToast(message) {
+      toastText.textContent = message;
+      toastBanner.classList.remove('opacity-0', 'translate-y-3');
+      toastBanner.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastBanner.classList.remove('opacity-100', 'translate-y-0');
+        toastBanner.classList.add('opacity-0', 'translate-y-3');
+      }, 2600);
+    }
+
+    exportMenuToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = exportDropdown.classList.contains('dropdown-hidden');
+      exportDropdown.classList.toggle('dropdown-hidden', !isHidden);
+      exportDropdown.classList.toggle('dropdown-visible', isHidden);
+      exportChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+
+    // Close popovers when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!settingsPopover.contains(e.target) && !dockSettingsBtn.contains(e.target)) {
+        settingsPopover.classList.replace('popover-visible', 'popover-hidden');
+      }
+      if (!exportDropdown.contains(e.target) && !exportMenuToggle.contains(e.target)) {
+        exportDropdown.classList.replace('dropdown-visible', 'dropdown-hidden');
+        exportDropdown.classList.replace('dropdown-visible', 'dropdown-hidden');
+        exportChevron.style.transform = 'rotate(0deg)';
+      }
+    });
+
+    /**
+     * Builds a clean, standalone SVG string capturing the exact current shape,
+     * color, expression, and live eye gaze position.
+     */
+    function buildStandaloneSVG(includeBackground = false) {
+      const shapeObj = SHAPES.find((s) => s.id === state.shapeId) || SHAPES[0];
+      const expObj = EXPRESSIONS.find((e) => e.id === state.expressionId) || EXPRESSIONS[0];
+      const eyeFill = getEyeContrastColor(state.color);
+      const eyesSvg = expObj.render(eyeFill);
+
+      const { px, py, tiltDeg, perspScaleX, perspScaleY } = computeEyeTransform(motion.gazeX, motion.gazeY);
+      const leftCompression = 1 - Math.max(0, -motion.gazeX) * 0.06;
+      const rightCompression = 1 - Math.max(0, motion.gazeX) * 0.06;
+
+      const bgColors = {
+        'theme-studio': '#F7F7F5',
+        'theme-white': '#FFFFFF',
+        'theme-dark': '#121316',
+        'theme-grid': '#F7F7F5'
+      };
+      const bgRect = includeBackground
+        ? `<rect width="320" height="320" fill="${bgColors[state.theme] || '#F7F7F5'}" />`
+        : '';
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="1024" height="1024">
+  ${bgRect}
+  <g transform="translate(160, 160)">
+    <path d="${shapeObj.path}" fill="${state.color}" />
+    <g transform="translate(${px.toFixed(2)}, ${py.toFixed(2)}) rotate(${tiltDeg.toFixed(2)}) scale(${perspScaleX.toFixed(4)}, ${perspScaleY.toFixed(4)})">
+      <g transform="scale(${leftCompression.toFixed(4)}, 1)">${eyesSvg.left}</g>
+      <g transform="scale(${rightCompression.toFixed(4)}, 1)">${eyesSvg.right}</g>
+    </g>
+  </g>
+</svg>`;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function exportAsPNG(includeBackground = false) {
+      const svgMarkup = buildStandaloneSVG(includeBackground);
+      const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 1024, 1024);
+        URL.revokeObjectURL(url);
+
+        canvas.toBlob((pngBlob) => {
+          if (pngBlob) {
+            const suffix = includeBackground ? 'studio' : 'transparent';
+            downloadBlob(pngBlob, `bot-avatar-${state.shapeId}-${suffix}.png`);
+            showToast(`已导出 1024×1024 ${includeBackground ? '带背景色' : '透明背景'} PNG`);
+          }
+        }, 'image/png');
+      };
+      img.src = url;
+    }
+
+    function exportAsSVG() {
+      const svgMarkup = buildStandaloneSVG(false);
+      const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+      downloadBlob(blob, `bot-avatar-${state.shapeId}.svg`);
+      showToast('已导出 SVG 矢量图');
+    }
+
+    function copySVGCode() {
+      const svgMarkup = buildStandaloneSVG(false);
+      const textarea = document.createElement('textarea');
+      textarea.value = svgMarkup;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('SVG 矢量代码已复制到剪贴板');
+      } catch (err) {
+        showToast('复制失败，请尝试导出 SVG 文件');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    exportPrimaryBtn.addEventListener('click', () => exportAsPNG(false));
+
+    document.querySelectorAll('.export-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const mode = opt.dataset.export;
+        exportDropdown.classList.replace('dropdown-visible', 'dropdown-hidden');
+        exportChevron.style.transform = 'rotate(0deg)';
+
+        if (mode === 'png-transparent') exportAsPNG(false);
+        else if (mode === 'png-bg') exportAsPNG(true);
+        else if (mode === 'svg-file') exportAsSVG();
+        else if (mode === 'svg-copy') copySVGCode();
+      });
+    });
+
+    /**
+     * 13. INITIALIZE ON WINDOW LOAD
+     */
+    window.addEventListener('load', () => {
+      renderShapeCards();
+      renderExpressionCards();
+      renderColorSwatches();
+      updateBotAppearance();
+      updateActiveCards();
+      requestAnimationFrame(animationLoop);
+    });
+  </script>
+</body>
+</html>
