@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ant-bot"
+version = "0.1.0"
+description = "Always-On Personal Bot multi-agent backend and Expo mobile application"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "aiosqlite",
+    "pydantic>=2.0",
+    "python-multipart",
+    "Pillow",
+    "croniter",
+    "httpx",
+    "websockets",
+    "google-antigravity",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+include = ["backend*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]

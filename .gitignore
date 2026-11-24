@@ -30,3 +30,7 @@ workspace/
 # OS / Editor
 .DS_Store
 *.log
+
+# Local specification docs (never commit/push)
+docs/
+
